@@ -1,6 +1,6 @@
 ;; init-org.el --- Initialize org configurations.	-*- lexical-binding: t -*-
 
-;; Copyright (C) 2019 Vincent Zhang
+;; Copyright (C) 2006-2020 Vincent Zhang
 
 ;; Author: Vincent Zhang <seagle0128@gmail.com>
 ;; URL: https://github.com/seagle0128/.emacs.d
@@ -30,8 +30,8 @@
 
 ;;; Code:
 
-(eval-when-compile
-  (require 'init-const))
+(require 'init-const)
+(require 'init-custom)
 
 (use-package org
   :ensure nil
@@ -101,30 +101,10 @@ prepended to the element after the #+HEADER: tag."
                   (if (or (region-active-p) (looking-back "^\s*" 1))
                       (org-hydra/body)
                     (self-insert-command 1)))))
-  :hook ((org-mode . (lambda ()
+  :hook (((org-babel-after-execute org-mode) . org-redisplay-inline-images) ; display image
+         (org-mode . (lambda ()
                        "Beautify org symbols."
-                       (push '("[ ]" . ?☐) prettify-symbols-alist)
-                       (push '("[X]" . ?☑) prettify-symbols-alist)
-                       (push '("[-]" . ?⛝) prettify-symbols-alist)
-
-                       (push '("#+ARCHIVE:" . ?📦) prettify-symbols-alist)
-                       (push '("#+AUTHOR:" . ?👤) prettify-symbols-alist)
-                       (push '("#+CREATOR:" . ?💁) prettify-symbols-alist)
-                       (push '("#+DATE:" . ?📆) prettify-symbols-alist)
-                       (push '("#+DESCRIPTION:" . ?⸙) prettify-symbols-alist)
-                       (push '("#+EMAIL:" . ?🖂) prettify-symbols-alist)
-                       (push '("#+OPTIONS:" . ?⛭) prettify-symbols-alist)
-                       (push '("#+SETUPFILE:" . ?⛮) prettify-symbols-alist)
-                       (push '("#+TAGS:" . ?🏷) prettify-symbols-alist)
-                       (push '("#+TITLE:" . ?🕮) prettify-symbols-alist)
-
-                       (push '("#+BEGIN_SRC" . ?✎) prettify-symbols-alist)
-                       (push '("#+END_SRC" . ?□) prettify-symbols-alist)
-                       (push '("#+BEGIN_QUOTE" . ?») prettify-symbols-alist)
-                       (push '("#+END_QUOTE" . ?«) prettify-symbols-alist)
-                       (push '("#+HEADERS" . ?☰) prettify-symbols-alist)
-                       (push '("#+RESULTS:" . ?💻) prettify-symbols-alist)
-
+                       (setq prettify-symbols-alist centaur-prettify-org-symbols-alist)
                        (prettify-symbols-mode 1)))
          (org-indent-mode . (lambda()
                               (diminish 'org-indent-mode)
@@ -132,27 +112,42 @@ prepended to the element after the #+HEADER: tag."
                               ;; @see https://github.com/seagle0128/.emacs.d/issues/88
                               (make-variable-buffer-local 'show-paren-mode)
                               (setq show-paren-mode nil))))
-  :init (setq org-agenda-files '("~/org")
-              org-todo-keywords
-              '((sequence "TODO(t)" "DOING(i)" "HANGUP(h)" "|" "DONE(d)" "CANCEL(c)")
-                (sequence "⚑(T)" "🏴(I)" "❓(H)" "|" "✔(D)" "✘(C)"))
-              org-todo-keyword-faces '(("HANGUP" . warning)
-                                       ("❓" . warning))
-              org-priority-faces '((?A . error)
-                                   (?B . warning)
-                                   (?C . success))
-              org-tags-column -80
-              org-log-done 'time
-              org-catch-invisible-edits 'smart
-              org-startup-indented t
-              org-ellipsis (if (char-displayable-p ?) "  " nil)
-              org-pretty-entities nil
-              org-hide-emphasis-markers t)
   :config
+  ;; To speed up startup, don't put to init section
+  (setq org-agenda-files `(,centaur-org-directory)
+        org-todo-keywords
+        '((sequence "TODO(t)" "DOING(i)" "HANGUP(h)" "|" "DONE(d)" "CANCEL(c)")
+          (sequence "⚑(T)" "🏴(I)" "❓(H)" "|" "✔(D)" "✘(C)"))
+        org-todo-keyword-faces '(("HANGUP" . warning)
+                                 ("❓" . warning))
+        org-priority-faces '((?A . error)
+                             (?B . warning)
+                             (?C . success))
+        org-tags-column -80
+        org-log-done 'time
+        org-catch-invisible-edits 'smart
+        org-startup-indented t
+        org-ellipsis (if (char-displayable-p ?⏷) "\t⏷" nil)
+        org-pretty-entities nil
+        org-hide-emphasis-markers t)
+
   ;; Add new template
   (add-to-list 'org-structure-template-alist '("n" . "note"))
 
-  ;; Enable markdown backend
+  ;; Use embedded webkit browser if possible
+  (when (featurep 'xwidget-internal)
+    (push '("\\.\\(x?html?\\|pdf\\)\\'"
+            .
+            (lambda (file _link)
+              (xwidget-webkit-browse-url (concat "file://" file))
+              (let ((buf (xwidget-buffer (xwidget-webkit-current-session))))
+                (when (buffer-live-p buf)
+                  (and (eq buf (current-buffer)) (quit-window))
+                  (pop-to-buffer buf)))))
+          org-file-apps))
+
+  ;; Add gfm/md backends
+  (use-package ox-gfm)
   (add-to-list 'org-export-backends 'md)
 
   (with-eval-after-load 'counsel
@@ -170,7 +165,7 @@ prepended to the element after the #+HEADER: tag."
     :init (setq org-fancy-priorities-list
                 (if (char-displayable-p ?⯀)
                     '("⯀" "⯀" "⯀" "⯀")
-                  '("HIGH" "MIDIUM" "LOW" "OPTIONAL"))))
+                  '("HIGH" "MEDIUM" "LOW" "OPTIONAL"))))
 
   ;; Babel
   (setq org-confirm-babel-evaluate nil
@@ -203,6 +198,10 @@ prepended to the element after the #+HEADER: tag."
     :if (executable-find "jupyter")     ; DO NOT remove
     :init (cl-pushnew '(ipython . t) load-language-list))
 
+  ;; Use mermadi-cli: npm install -g @mermaid-js/mermaid-cli
+  (use-package ob-mermaid
+    :init (cl-pushnew '(mermaid . t) load-language-list))
+
   (org-babel-do-load-languages 'org-babel-load-languages
                                load-language-list)
 
@@ -215,9 +214,16 @@ prepended to the element after the #+HEADER: tag."
   (use-package toc-org
     :hook (org-mode . toc-org-mode))
 
+  ;; Export text/html MIME emails
+  (use-package org-mime
+    :bind (:map message-mode-map
+           ("C-c M-o" . org-mime-htmlize)
+           :map org-mode-map
+           ("C-c M-o" . org-mime-org-buffer-htmlize)))
+
   ;; Preview
   (use-package org-preview-html
-    :diminish org-preview-html-mode)
+    :diminish)
 
   ;; Presentation
   (use-package org-tree-slide
@@ -225,7 +231,7 @@ prepended to the element after the #+HEADER: tag."
     :functions (org-display-inline-images
                 org-remove-inline-images)
     :bind (:map org-mode-map
-           ("C-<f7>" . org-tree-slide-mode)
+           ("s-<f7>" . org-tree-slide-mode)
            :map org-tree-slide-mode-map
            ("<left>" . org-tree-slide-move-previous-tree)
            ("<right>" . org-tree-slide-move-next-tree)
@@ -251,6 +257,36 @@ prepended to the element after the #+HEADER: tag."
     (org-pomodoro-mode-line-break ((t (:inherit success))))
     :bind (:map org-agenda-mode-map
            ("P" . org-pomodoro))))
+
+;; org-roam
+(when (and emacs/>=26p (executable-find "cc"))
+  (use-package org-roam
+    :diminish
+    :custom (org-roam-directory centaur-org-directory)
+    :hook (after-init . org-roam-mode)
+    :bind (:map org-roam-mode-map
+           (("C-c n l" . org-roam)
+            ("C-c n f" . org-roam-find-file)
+            ("C-c n g" . org-roam-graph))
+           :map org-mode-map
+           (("C-c n i" . org-roam-insert))
+           (("C-c n I" . org-roam-insert-immediate))))
+
+  (use-package org-roam-server
+    :functions xwidget-buffer xwidget-webkit-current-session
+    :hook (org-roam-server-mode . org-roam-server-browse)
+    :init
+    (defun org-roam-server-browse ()
+      (when org-roam-server-mode
+        (let ((url (format "http://%s:%d" org-roam-server-host org-roam-server-port)))
+          (if (featurep 'xwidget-internal)
+              (progn
+                (xwidget-webkit-browse-url url)
+                (let ((buf (xwidget-buffer (xwidget-webkit-current-session))))
+                  (when (buffer-live-p buf)
+                    (and (eq buf (current-buffer)) (quit-window))
+                    (pop-to-buffer buf))))
+            (browse-url url)))))))
 
 (provide 'init-org)
 

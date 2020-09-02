@@ -1,6 +1,6 @@
 ;; init-eshell.el --- Initialize eshell configurations.	-*- lexical-binding: t -*-
 
-;; Copyright (C) 2019 Vincent Zhang
+;; Copyright (C) 2006-2020 Vincent Zhang
 
 ;; Author: Vincent Zhang <seagle0128@gmail.com>
 ;; URL: https://github.com/seagle0128/.emacs.d
@@ -37,13 +37,20 @@
   :functions eshell/alias
   :hook (eshell-mode . (lambda ()
                          (bind-key "C-l" 'eshell/clear eshell-mode-map)
+                         ;; Aliases
                          (eshell/alias "f" "find-file $1")
                          (eshell/alias "fo" "find-file-other-window $1")
                          (eshell/alias "d" "dired $1")
+                         (eshell/alias "l" "ls -lFh")
                          (eshell/alias "ll" "ls -l")
-                         (eshell/alias "la" "ls -al")))
+                         (eshell/alias "la" "ls -lAFh")
+                         (eshell/alias "lr" "ls -tRFh")
+                         (eshell/alias "lrt" "ls -lFcrt")
+                         (eshell/alias "lsa" "ls -lah")
+                         (eshell/alias "lt" "ls -ltFh")))
   :config
   (with-no-warnings
+    ;; For compatibility
     (unless (fboundp 'flatten-tree)
       (defalias 'flatten-tree #'eshell-flatten-list))
 

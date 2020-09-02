@@ -39,6 +39,7 @@
 /places
 /projectile-bookmarks.eld
 /projectile.cache
+/projects
 /recentf
 /scratch
 /smex-items
@@ -58,6 +59,7 @@ ido.*
 image-dired/
 images/
 irony/
+librime/
 magithub/
 mspyls/
 newsticker/
@@ -65,9 +67,11 @@ persistent-scratch/
 persp-confs/
 rcirc-log/
 request/
+rime/
 rust-playground/
 server/
 session*
+snippets/
 thumbs/
 tldr/
 tmp*

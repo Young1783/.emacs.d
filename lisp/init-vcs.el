@@ -1,6 +1,6 @@
 ;; init-vcs.el --- Initialize version control system configurations.	-*- lexical-binding: t -*-
 
-;; Copyright (C) 2019 Vincent Zhang
+;; Copyright (C) 2016-2020 Vincent Zhang
 
 ;; Author: Vincent Zhang <seagle0128@gmail.com>
 ;; URL: https://github.com/seagle0128/.emacs.d
@@ -30,30 +30,37 @@
 
 ;;; Code:
 
-(eval-when-compile
-  (require 'init-const)
-  (require 'init-custom))
+(require 'init-const)
 
 ;; Git
 (use-package magit
+  :mode (("\\COMMIT_EDITMSG\\'" . text-mode)
+         ("\\MERGE_MSG\\'" . text-mode))
   :bind (("C-x g" . magit-status)
          ("C-x M-g" . magit-dispatch)
          ("C-c M-g" . magit-file-popup))
+  :init (setq magit-diff-refine-hunk t)
   :config
   (when sys/win32p
     (setenv "GIT_ASKPASS" "git-gui--askpass"))
 
-  (if (fboundp 'transient-append-suffix)
-      ;; Add switch: --tags
-      (transient-append-suffix 'magit-fetch
-        "-p" '("-t" "Fetch all tags" ("-t" "--tags"))))
+  (when (fboundp 'transient-append-suffix)
+    ;; Add switch: --tags
+    (transient-append-suffix 'magit-fetch
+      "-p" '("-t" "Fetch all tags" ("-t" "--tags"))))
 
   ;; Access Git forges from Magit
   (when (executable-find "cc")
-    (use-package forge :demand))
+    (use-package forge
+      :demand
+      :init (setq forge-topic-list-columns
+                  '(("#" 5 t (:right-align t) number nil)
+                    ("Title" 60 t nil title  nil)
+                    ("State" 6 t nil state nil)
+                    ("Updated" 10 t nill updated nil)))))
 
   ;; Show TODOs in magit
-  (when (and emacs/>=25.2p (not sys/win32p))
+  (when emacs/>=25.2p
     (use-package magit-todos
       :init
       (setq magit-todos-nice (if (executable-find "nice") t nil))
@@ -65,7 +72,10 @@
   (git-timemachine-minibuffer-author-face ((t (:inherit success))))
   (git-timemachine-minibuffer-detail-face ((t (:inherit warning))))
   :bind (:map vc-prefix-map
-         ("t" . git-timemachine)))
+         ("t" . git-timemachine))
+  :hook (before-revert . (lambda ()
+                           (when (bound-and-true-p git-timemachine-mode)
+                             (user-error "Cannot revert the timemachine buffer")))))
 
 ;; Pop up last commit information of current line
 (use-package git-messenger
@@ -131,8 +141,8 @@
                                 :string popuped-message
                                 :left-fringe 8
                                 :right-fringe 8
-                                :internal-border-color (face-foreground 'default)
-                                :internal-border-width 1)
+                                :internal-border-width 1
+                                :internal-border-color (face-foreground 'font-lock-comment-face))
                  (unwind-protect
                      (push (read-event) unread-command-events)
                    (posframe-delete buffer-name))))

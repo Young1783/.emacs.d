@@ -1,6 +1,6 @@
 ;; init-prog.el --- Initialize programming configurations.	-*- lexical-binding: t -*-
 
-;; Copyright (C) 2019 Vincent Zhang
+;; Copyright (C) 2006-2020 Vincent Zhang
 
 ;; Author: Vincent Zhang <seagle0128@gmail.com>
 ;; URL: https://github.com/seagle0128/.emacs.d
@@ -30,8 +30,7 @@
 
 ;;; Code:
 
-(eval-when-compile
-  (require 'init-custom))
+(require 'init-custom)
 
 ;; Prettify Symbols
 ;; e.g. display “lambda” as “λ”
@@ -56,20 +55,19 @@
     (("i" dumb-jump-go-prompt "Prompt")
      ("l" dumb-jump-quick-look "Quick look")
      ("b" dumb-jump-back "Back"))))
-  :bind (:map dumb-jump-mode-map
-         ("M-g o" . dumb-jump-go-other-window)
+  :bind (("M-g o" . dumb-jump-go-other-window)
          ("M-g j" . dumb-jump-go)
          ("M-g i" . dumb-jump-go-prompt)
          ("M-g x" . dumb-jump-go-prefer-external)
          ("M-g z" . dumb-jump-go-prefer-external-other-window)
          ("C-M-j" . dumb-jump-hydra/body))
-  :hook (after-init . dumb-jump-mode)
-  :config
+  :init
+  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate)
   (setq dumb-jump-prefer-searcher 'rg
         dumb-jump-selector 'ivy))
 
 (use-package editorconfig
-  :diminish editorconfig-mode
+  :diminish
   :hook (after-init . editorconfig-mode))
 
 ;; Run commands quickly
@@ -80,13 +78,20 @@
 (use-package cask-mode)
 (use-package csharp-mode)
 (use-package csv-mode)
-(use-package dockerfile-mode)
+(use-package julia-mode)
 (use-package lua-mode)
+(use-package mermaid-mode)
 (use-package plantuml-mode)
 (use-package powershell)
 (use-package rmsbolt)                   ; A compiler output viewer
+(use-package scala-mode)
 (use-package swift-mode)
 (use-package vimrc-mode)
+
+(use-package protobuf-mode
+  :hook (protobuf-mode . (lambda ()
+                           (setq imenu-generic-expression
+                                 '((nil "^[[:space:]]*\\(message\\|service\\|enum\\)[[:space:]]+\\([[:alnum:]]+\\)" 2))))))
 
 (use-package nxml-mode
   :ensure nil
@@ -99,7 +104,7 @@
 ;; Batch Mode eXtras
 (use-package bmx-mode
   :after company
-  :diminish bmx-mode
+  :diminish
   :hook (after-init . bmx-mode-setup-defaults))
 
 ;; Fish shell
